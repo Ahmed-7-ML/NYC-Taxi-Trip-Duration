@@ -106,7 +106,6 @@ class ModelConfig:
     n_jobs: int = -1   # Use all Computations (CPUs)
     iqr_factor: float = 1.5
 
-
 # Absolute path anchored to pipeline/ — all downstream components share this URI.
 PIPELINE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MLFLOW_DB_PATH = os.path.join(PIPELINE_DIR, "mlflow_trip_duration.db")
@@ -117,13 +116,29 @@ class MlflowConfig():
     """MLflow tracking and registry configuration."""
     
     experiment_name: str = "trip_duration_v1"
-    
+    model_name: str = "trip_duration_model"
+    tracking_uri: str = MLFLOW_TRACKING_URI
+    min_r2_improvement: float = 0.01
 
 @dataclass
 class Config:
+    """Main configuration container."""
     data: DataConfig = field(default_factory=DataConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     mlflow: MlflowConfig = field(default_factory=MlflowConfig)
 
 def load_config() -> Config():
+    """Load configuration with optional environment variable overrides."""
     config = Config()
+    
+    total_months = len(config.data.train_years) * len(config.data.train_months)
+    config.data.sample_per_month = config.data.sample_size // total_months
+    
+    if os.getenv('RANDOM_STATE'):
+        config.model.random_state = int(os.getenv('RANDOM_STATE'))
+    if os.getenv('SAMPLE_SIZE'):
+        config.data.sample_size = int(os.getenv('SAMPLE_SIZE'))
+    if os.getenv('TRAIN_YEAR'):
+        config.data.train_year = int(os.getenv('TRAIN_YEAR'))
+    if os.getenv('MLFLOW_EXPERIMENT_NAME'):
+        config.mlflow.experiment_name = os.getenv('MLFLOW_EXPERIMENT_NAME')
