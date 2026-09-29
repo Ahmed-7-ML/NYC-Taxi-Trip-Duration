@@ -1,11 +1,11 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from typing import List
 import os
 
 @dataclass
 class DataConfig:
     """Data acquisition and filtering configuration.""" 
-    tlc_url_template : str = (
+    tlc_url_template: str = (
         "https://d37ci6vzurychx.cloudfront.net/trip-data/"
         "yellow_tripdata_{year}-{month:02d}.parquet"
     )
@@ -112,7 +112,7 @@ MLFLOW_DB_PATH = os.path.join(PIPELINE_DIR, "mlflow_trip_duration.db")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", f"sqlite:///{MLFLOW_DB_PATH}")
 
 @dataclass
-class MlflowConfig():
+class MlflowConfig:
     """MLflow tracking and registry configuration."""
     
     experiment_name: str = "trip_duration_v1"
@@ -139,6 +139,8 @@ def load_config() -> Config():
     if os.getenv('SAMPLE_SIZE'):
         config.data.sample_size = int(os.getenv('SAMPLE_SIZE'))
     if os.getenv('TRAIN_YEAR'):
-        config.data.train_year = int(os.getenv('TRAIN_YEAR'))
+        config.data.train_years = int(os.getenv('TRAIN_YEAR'))
     if os.getenv('MLFLOW_EXPERIMENT_NAME'):
         config.mlflow.experiment_name = os.getenv('MLFLOW_EXPERIMENT_NAME')
+
+    return config
