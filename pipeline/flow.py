@@ -19,18 +19,30 @@ Prefect-orchestrated trip duration ML pipeline — 9 steps, 6 models, MLflow tra
 # Select Best Model, Evaluate doesn't need Retry
 # Tune Model need retrying as it may generate problems
 # Register Model needs Retrying as it depends on MLFlow
+
+# Why Separate Logger for each task?
+    - As each Task has separate context
+    - In Prefect UI : Logs appear under each Task
     
     Usage:
         python main.py --sample-size 50000 --no-tune
         python main.py --sample-size 500000 --tune --promote
         prefect server start   # optional UI at http://127.0.0.1:4200
 """
+import os
+# import sys
+# from pathlib import Path
+
+# sys.path.insert(0, str(Path(__file__).parent))         # pipeline/ → config, src
+# sys.path.insert(0, str(Path(__file__).parent.parent))  # 4-Deploy-Online/ → shared4
 
 import mlflow
 import numpy as np
+import pandas as pd
 import pickle, tempfile
 from pathlib import Path as _Path
-from typing import Optional
+from typing import Optional, List, Dict, Tuple, Any
+from sklearn.pipeline import Pipeline
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score
 
@@ -59,7 +71,7 @@ from src.models.model_registry import ModelRegistry
 #    As you can see "Attempt 1 Failed", Network Timeouts, Retrying in 10s.... and so on in the Task Log.
 
 @task(name='acquire-data', retries=3, retry_delay_seconds=10)
-def acquire_data(config):
+def acquire_data(config) -> pd.DataFrame:
     """Download and load the TLC trip dataset."""
     logger = get_run_logger()
     logger.info("📥 Step 1: Data Acquisition")
@@ -78,7 +90,7 @@ def acquire_data(config):
 #      The underlying problem needs fixing (bad data, config issue, etc.).
 
 @task(name='preprocess-data')
-def preprocess_data(df_raw, config):
+def preprocess_data(df_raw:pd.DataFrame, config) -> Tuple[pd.DataFrame, pd.Series]:
     """Clean data and extract features/target."""
     logger = get_run_logger()
     logger.info("🧹 Step 2: Data Preprocessing")
@@ -98,7 +110,7 @@ def preprocess_data(df_raw, config):
 #  - Having it as a task makes this contract explicit and visible in the UI.
 
 @task(name='split-data')
-def split_data(X, y, confgi):
+def split_data(X:pd.DataFrame, y:pd.Series, config) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.Series, pd.Series, pd.Series]:
     """Split data into train, validation, and test sets."""
     logger = get_run_logger()
     logger.info("✂️  Step 3: Data Splitting (before feature engineering — no leakage)")
@@ -128,7 +140,7 @@ def split_data(X, y, confgi):
 #  - you can verify in the UI that this step always ran before training
 
 @task(name='engineer-features')
-def engineer_features(X_train, X_val, X_test, config):
+def engineer_features(X_train:pd.DataFrame, X_val:pd.DataFrame, X_test:pd.DataFrame, config) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, List[str], Any]:
     """Fit feature pipeline on train, transform all sets."""
     logger = get_run_logger()
     logger.info("⚙️  Step 4: Feature Engineering")
@@ -169,7 +181,7 @@ def engineer_features(X_train, X_val, X_test, config):
 #       - One retry with a 30s gap handles transient resource contention.
 
 @task(name='train-model', retries=1, retry_delay_seconds=30)
-def train_single_model(model_name, model, X_train, X_val, y_train, y_val, config):
+def train_single_model(model_name:str, model, X_train:pd.DataFrame, X_val:pd.DataFrame, y_train:pd.Series, y_val:pd.Series, config) -> Dict[str, Any]:
     """Train one model and log to MLflow. Called from flow — never from another task."""
     logger = get_run_logger()
     logger.info(f"🎯 Training: {model_name}")
@@ -195,20 +207,20 @@ def train_single_model(model_name, model, X_train, X_val, y_train, y_val, config
 #       - The UI shows the winner clearly as a separate step after all individual model tasks complete.
 
 @task(name='select-best-model')
-def select_best_model(results: dict):
+def select_best_model(results:Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
     """Pick the best model based on validation R²."""
     logger = get_run_logger()
     
-    best_name = max(results, key=lambda k: results[k]['metrics'['val_r2']])
+    best_name = max(results, key=lambda k: results[k]['metrics']['val_r2'])
     best_model = results[best_name]
     logger.info("📊 Model Comparison (Val R²):")
     
-    for name, r in sorted(result.items(), key=lambda x: x[1]['metrics']['val_r2'], reverse=True):
+    for name, r in sorted(results.items(), key=lambda x: x[1]['metrics']['val_r2'], reverse=True):
         marker = " ← BEST" if name == best_name else ""
         logger.info(f"   {name:<25} {r['metrics']['val_r2']:.4f}{marker}")
     
-    logger.info(f"\n🏆 Best: {best_name} | Val R²: {best['metrics']['val_r2']:.4f}")
-    return best
+    logger.info(f"\n🏆 Best: {best_name} | Val R²: {best_model['metrics']['val_r2']:.4f}")
+    return best_model
 
 # TASK 6 [Hyperparameter Tuning]──────────────────────────────────────────────────────────
 #   - WHY @task:
@@ -223,10 +235,10 @@ def select_best_model(results: dict):
 #       - A failure is a real error (OOM, bad params), not a transient issue.
 
 @task(name='tune-model')
-def tune_model(best_result, X_train, y_train, X_val, y_val, config):
+def tune_model(best_result:Dict[str, Any], X_train:pd.DataFrame, y_train:pd.Series, X_val:pd.DataFrame, y_val:pd.Series, config) -> Optional[Dict[str, Any]]:
     """Tune the best model with HalvingRandomSearchCV."""
     logger = get_run_logger()
-    model_name = best_results['model_name']
+    model_name = best_result['model_name']
     tunable = config.model.tunable_models
     
     if model_name not in tunable:
@@ -273,7 +285,7 @@ def tune_model(best_result, X_train, y_train, X_val, y_val, config):
 #   Making this a task enforces that contract — you can see in the UI that it ran exactly once, after all training and tuning completed.
 
 @task(name='evaluate-model')
-def evaluate_model(best_result, X_test, y_test, config):
+def evaluate_model(best_result:Dict[str], X_test:pd.DataFrame, y_test:pd.Series, config) -> Dict[str, float]:
     """Evaluate the final model on the held-out test set."""
     logger = get_run_logger()
     logger.info("🔬 Step 7: Test Set Evaluation")
@@ -297,7 +309,7 @@ def evaluate_model(best_result, X_test, y_test, config):
 #       - If the server is temporarily unavailable, retrying avoids failing an otherwise successful pipeline run.
 
 @task(name='register-model', retries=2, retry_delay_seconds=5)
-def register_model(best_result, test_metrics, promote_to_prod, config, preprocessor=None, train_stats=None):
+def register_model(best_result:Dict[str, any], test_metrics:Dict[str, float], promote_to_prod:bool, config, preprocessor:Any=None, train_stats:Optional[Dict[str, Any]]=None) -> Optional[str]:
     """Register the best model in MLflow and transition to Staging."""
     logger = get_run_logger()
     logger.info("📦 Step 8: Model Registry")
@@ -319,7 +331,7 @@ def register_model(best_result, test_metrics, promote_to_prod, config, preproces
         'schema_version': 'zone_ids'
     }
     
-    version = registry.transition_to_staging(best_result['run_id'], escription, tags)
+    version = registry.transition_to_staging(best_result['run_id'], description, tags)
     if version and promote_to_prod:
         registry.transition_to_production(version)
         logger.info(f"✅ Model v{version} → @champion")
@@ -379,7 +391,7 @@ def register_model(best_result, test_metrics, promote_to_prod, config, preproces
 #       - Feature importance is a post-registration audit step, not part of training.
 #       - Keeping it separate makes it visible in the UI and easy to skip/re-run.
 @task(name="log-feature-importance")
-def log_feature_importance(best_result, feature_names, model_version, config):
+def log_feature_importance(best_result:Dict[str, Any], feature_names:List[str], model_version:Optional[str], config) -> None:
     """Log tree model feature importances to the registered version's MLflow run."""
     logger = get_run_logger()
 
@@ -438,8 +450,8 @@ def trip_duration_pipeline(
     tune: bool = True,
     promote_to_prod: bool = False,
     experiment_name: Optional[str] = None,
-    train_years: Optional[list] = None,
-    ):
+    train_years: Optional[list[int]] = None,
+    ) -> Dict[str, Any]:
     """
     End-to-End ML Pipeline for Trip Duration Prediction
     Steps:
@@ -459,7 +471,7 @@ def trip_duration_pipeline(
     if train_years:
         config.data.train_years = train_years
     total_months = len(config.data.train_years) * len(config.data.train_months)
-    config.data.samples_per_month = sample_size // total_months
+    config.data.sample_per_month = sample_size // total_months
     if experiment_name:
         config.mlflow.experiment_name = experiment_name
     
@@ -512,11 +524,22 @@ def trip_duration_pipeline(
     #   future = train_single_model.submit(name, model, ...)
     model_portfolio = build_model_portfolio(config.model)
     training_results = {}
+    
+    # Train Models in Parallel --> Parallism
+    # for model_name, model in model_portfolio.items():
+    #     result = train_single_model.submit(
+    #         model_name, model,
+    #         X_train_p, X_val_p,
+    #         y_train, y_val,
+    #         config
+    #     )
+    #     training_results[model_name] = result
+    
     for model_name, model in model_portfolio.items():
         result = train_single_model(
             model_name, model,
-            X_train_p, y_train,
-            X_val_p, y_val,
+            X_train_p, X_val_p,
+            y_train, y_val,
             config
         )
         training_results[model_name] = result
