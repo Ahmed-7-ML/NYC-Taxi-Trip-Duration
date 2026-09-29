@@ -35,20 +35,20 @@ class DataAcquisition:
         # Take samples per month and Check it is less than the dataframe length
         n = min(self.config.sample_per_month, len(df))
         sample_df = df.sample(n=n, random_state=42)
-        logger.info(f"{year}-{moth:02d}: sampled {n:,} / {len(df):,} rows")
+        logger.info(f"{year}-{month:02d}: sampled {n:,} / {len(df):,} rows")
         return sample_df
     
     def validate_data(self, df:pd.DataFrame) -> bool:
         """Validate loaded data has required columns."""
         required_cols = set(self.config.prediction_time_features + ['tpep_dropoff_datetime'])
-        missing = required - set(df.columns)
+        missing = required_cols - set(df.columns)
         
         if missing:
             logger.error(f"❌Missing Cols: {missing}")
             return False
         
         logger.info(f"✅Schema Validation Success - {len(df.columns)} columns."
-                    f"{df.isnull().sum():,} Missing Values.")
+                    f"{df.isnull().sum().sum():,} Missing Values.")
         return True
 
     def run(self) -> pd.DataFrame:
@@ -61,7 +61,7 @@ class DataAcquisition:
         total_periods = len(self.config.train_years) * len(self.config.train_months)
         logger.info(f"📥 Downloading TLC data: years={self.config.train_years}")
         logger.info(f"   Months    : {self.config.train_months}")
-        logger.info(f"   Per period: {self.config.samples_per_month:,} rows")
+        logger.info(f"   Per period: {self.config.sample_per_month:,} rows")
         logger.info(f"   Total     : ~{self.config.sample_size:,} rows "
                     f"({total_periods} periods)")
         
