@@ -1,7 +1,7 @@
 """
 Entry point for the Prefect-Orchestrated Trip Duration Pipeline
     Usage:
-        python main.py      --> Full Run with defaults
+        python main.py --> Full Run with defaults
         python main.py --sample-size 5000 --no-tune
         python main.py --sample-size 20000 --promote
         python main.py --experiment-name my_experiment
@@ -12,7 +12,7 @@ What happened when you run this:
     3. Each @task inside the flow gets its own `TaskRun` with state tracking
     4. Prefect UI Running (Prefect Server Starting) -> http://127.0.0.1:4200
 
-[argparse]:
+[argparse]:https://docs.python.org/3/library/argparse.html
     - Built-in Python Module used to Parse Command-Line Options, Arguments and Sub-Commands.
 """
 import sys
@@ -25,7 +25,7 @@ from flow import trip_duration_pipeline
 def parse_args():
     # It is a container for argument specifications and has options that apply to the parser as whole
     parser = argparse.ArgumentParser(
-        prog='Trip Duration Pipeline - Ahmed Akram Amer'
+        prog='Trip Duration Pipeline - Ahmed Akram Amer'و
         description='Trip Duration Pipeline — Prefect Orchestrated',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         # Text at the bottom of help
@@ -52,7 +52,7 @@ def parse_args():
     # It attaches individual argument specifications to the parser. It supports positional arguments, options that accept values, and on/off flags
     parser.add_argument(
         '--sample-size', type=int, default=20000,
-        help='Number of training samples (default: 200000)'
+        help='Number of training samples (default: 20000)'
     )
 
     # action='store_true' -> On Flag
@@ -63,12 +63,12 @@ def parse_args():
 
     # action='store_false' -> Off Flag
     parser.add_argument(
-        '--no-tune', action='store_false', default=False,
+        '--no-tune', action='store_false', dest='tune',
         help='Disable hyperparameter tuning'
     )
 
     parser.add_argument(
-        '--promote', action='store_false', default=False,
+        '--promote', action='store_true', default=False,
         help='Auto-promote best model to Production in MLflow (default: False)'
     )
 
@@ -78,7 +78,7 @@ def parse_args():
     )
     # parser.print_help()
     # It runs the parser and places the extracted data in a argparse.Namespace object
-    return parser.parser_args()
+    return parser.parse_args()
 
 if __name__ == '__main__':
     args = parse_args()
