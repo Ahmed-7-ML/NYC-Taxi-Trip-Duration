@@ -285,7 +285,7 @@ def tune_model(best_result:Dict[str, Any], X_train:pd.DataFrame, y_train:pd.Seri
 #   Making this a task enforces that contract — you can see in the UI that it ran exactly once, after all training and tuning completed.
 
 @task(name='evaluate-model')
-def evaluate_model(best_result:Dict[str], X_test:pd.DataFrame, y_test:pd.Series, config) -> Dict[str, float]:
+def evaluate_model(best_result:Dict[str, Any], X_test:pd.DataFrame, y_test:pd.Series, config) -> Dict[str, float]:
     """Evaluate the final model on the held-out test set."""
     logger = get_run_logger()
     logger.info("🔬 Step 7: Test Set Evaluation")
@@ -309,7 +309,7 @@ def evaluate_model(best_result:Dict[str], X_test:pd.DataFrame, y_test:pd.Series,
 #       - If the server is temporarily unavailable, retrying avoids failing an otherwise successful pipeline run.
 
 @task(name='register-model', retries=2, retry_delay_seconds=5)
-def register_model(best_result:Dict[str, any], test_metrics:Dict[str, float], promote_to_prod:bool, config, preprocessor:Any=None, train_stats:Optional[Dict[str, Any]]=None) -> Optional[str]:
+def register_model(best_result:Dict[str, Any], test_metrics:Dict[str, float], promote_to_prod:bool, config, preprocessor:Any=None, train_stats:Optional[Dict[str, Any]]=None) -> Optional[str]:
     """Register the best model in MLflow and transition to Staging."""
     logger = get_run_logger()
     logger.info("📦 Step 8: Model Registry")
@@ -450,7 +450,7 @@ def trip_duration_pipeline(
     tune: bool = True,
     promote_to_prod: bool = False,
     experiment_name: Optional[str] = None,
-    train_years: Optional[list[int]] = None,
+    train_years: Optional[List[int]] = None,
     ) -> Dict[str, Any]:
     """
     End-to-End ML Pipeline for Trip Duration Prediction
