@@ -5,5 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi[standard]>=0.141.1",
+    "mlflow>=3.16.1",
     "prefect>=3.8.7",
 ]

@@ -127,7 +127,7 @@ class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
     mlflow: MlflowConfig = field(default_factory=MlflowConfig)
 
-def load_config() -> Config():
+def load_config() -> Config:
     """Load configuration with optional environment variable overrides."""
     config = Config()
     
