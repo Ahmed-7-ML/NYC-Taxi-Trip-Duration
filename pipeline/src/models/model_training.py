@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # instantiating ModelTrainer (avoids building all 5 models just to get names).
 # ─────────────────────────────────────────────────────────────────────────────
 
-def build_model_portfolio(config: ModelConfg) -> Dict:
+def build_model_portfolio(config: ModelConfig) -> Dict:
     """
     Build the model portfolio as a plain dict.
 
@@ -45,7 +45,7 @@ def build_model_portfolio(config: ModelConfg) -> Dict:
         ),
         'Random Forest': RandomForestRegressor(
             random_state=config.random_state,
-            n_estimator=config.rf_n_estimators,
+            n_estimators=config.rf_n_estimators,
             max_depth=config.rf_max_depth,
             min_samples_split=config.rf_min_samples_split
         ),
@@ -68,8 +68,8 @@ def build_model_portfolio(config: ModelConfg) -> Dict:
         ),
     }
     
-    if config.models_to_train:
-        models = {k:v for k, v in models.items() if k in config.models_to_train}
+    if config.model_to_train:
+        models = {k:v for k, v in models.items() if k in config.model_to_train}
 
     return models
 
@@ -125,14 +125,15 @@ class ModelTrainer:
             mlflow.log_param('val_samples', X_val.shape[0])
             mlflow.log_param('features', X_train.shape[1])
             
-            singature = infer_signature(X_train, y_train_pred)
+            signature = infer_signature(X_train, y_train_pred)
             
             # FIX: Trust all common sklearn and xgboost types
             # This fixes the "untrusted types" error that occurs with:
             #       - Gradient Boosting (sklearn internal loss types)
             #       - XGBoost (xgboost core and sklearn wrapper types)
             trusted_types = [
-                # sklearn types (for Gradient Boosting)
+                # sklearn types (for Random Forest / Gradient Boosting)
+                'sklearn.tree._tree.Tree',
                 'sklearn._loss.link.IdentityLink',
                 'sklearn._loss.link.Interval', 
                 'sklearn._loss.loss.HalfSquaredError',
@@ -211,12 +212,12 @@ class ModelTrainer:
             search.fit(X_train, y_train)
             tune_time = time.time() - start_time
             
-            improvement = search.best_score - original_score
+            improvement = search.best_score_ - original_score
             mlflow.log_params(search.best_params_)
             mlflow.log_metrics({
                 'best_cv_score': search.best_score_,
                 'improvement': improvement,
-                'tuning_time_seconds': tuning_time
+                'tuning_time_seconds': tune_time
             })
             mlflow.set_tag('tuned', 'true')
             mlflow.set_tag('orchestrator', 'prefect')
@@ -225,6 +226,7 @@ class ModelTrainer:
 
             # FIX: Trust both sklearn and xgboost types for tuned models too
             trusted_types = [
+                'sklearn.tree._tree.Tree',
                 'sklearn._loss.link.IdentityLink',
                 'sklearn._loss.link.Interval', 
                 'sklearn._loss.loss.HalfSquaredError',
@@ -250,7 +252,7 @@ class ModelTrainer:
                 )
                 logger.info(f"   ✓ Tuned model logged (improvement: +{improvement:.4f} below threshold)")
 
-            logger.info(f"   Best CV R²: {search.best_score_:.4f}, Time: {tuning_time:.1f}s")
+            logger.info(f"   Best CV R²: {search.best_score_:.4f}, Time: {tune_time:.1f}s")
             
             return search.best_estimator_, run.info.run_id, search.best_score_
      

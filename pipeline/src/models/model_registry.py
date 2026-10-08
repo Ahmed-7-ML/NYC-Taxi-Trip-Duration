@@ -4,7 +4,7 @@ from typing import List, Optional, Dict
 from mlflow import MlflowClient
 from mlflow.entities.model_registry import ModelVersion
 
-from config.config import MLflowConfig
+from config.config import MlflowConfig
 
 
 logger = logging.getLogger(__name__)
@@ -12,11 +12,10 @@ logger = logging.getLogger(__name__)
 CHAMPION   = "champion"    # replaces Production
 CHALLENGER = "challenger"  # replaces Staging
 
-
 class ModelRegistry:
     """Handle MLflow model registry operations using aliases (MLflow 3.x)."""
 
-    def __init__(self, mlflow_config: MLflowConfig, client: MlflowClient):
+    def __init__(self, mlflow_config: MlflowConfig, client: MlflowClient):
         self.mlflow_config = mlflow_config
         self.client = client
         self.model_name = mlflow_config.model_name

@@ -27,7 +27,7 @@ class DataPreprocessor:
         df_clean['tpep_dropoff_datetime'] = pd.to_datetime(df_clean['tpep_dropoff_datetime'])
         df_clean['trip_duration_minutes'] = (
             df_clean['tpep_dropoff_datetime'] - df_clean['tpep_pickup_datetime']
-        ).dt.total_seconds / 60
+        ).dt.total_seconds() / 60
         
         # Filteration unrealisitc durations
         logger.info("   ✓ Filtering trip duration...")

@@ -107,6 +107,5 @@ def load_model():
             "Re-run the pipeline with --promote to register a model that includes it."
         ) from e
 
-
 def get_State() -> _State:
     return _state

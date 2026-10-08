@@ -1,6 +1,7 @@
 """
 Entry point for the Prefect-Orchestrated Trip Duration Pipeline
     Usage:
+        - In Another Terminal: `uv run prefect server start`
         python main.py --> Full Run with defaults
         python main.py --sample-size 5000 --no-tune
         python main.py --sample-size 20000 --promote
@@ -25,7 +26,7 @@ from flow import trip_duration_pipeline
 def parse_args():
     # It is a container for argument specifications and has options that apply to the parser as whole
     parser = argparse.ArgumentParser(
-        prog='Trip Duration Pipeline - Ahmed Akram Amer'و
+        prog='Trip Duration Pipeline - Ahmed Akram Amer',
         description='Trip Duration Pipeline — Prefect Orchestrated',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         # Text at the bottom of help

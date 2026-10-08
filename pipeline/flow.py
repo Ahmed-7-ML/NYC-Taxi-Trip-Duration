@@ -56,7 +56,7 @@ from prefect import flow, task, get_run_logger
 from config.config import load_config
 from src.data.data_acquisition import DataAcquisition
 from src.data.data_preprocessing import DataPreprocessor
-from shared.feature_engineering import build_preprocessor
+from src.features.feature_engineering import build_preprocessor
 from src.models.model_training import ModelTrainer, build_model_portfolio
 from src.models.model_registry import ModelRegistry
 
@@ -189,7 +189,7 @@ def train_single_model(model_name:str, model, X_train:pd.DataFrame, X_val:pd.Dat
     client = mlflow.MlflowClient()
     trainer = ModelTrainer(config.model, config.mlflow, client)
     metrics, trained_model, run_id = trainer.train_single_model(
-        model, X_train, y_train, X_val, y_val, model_name
+        model, model_name, X_train, y_train, X_val, y_val
     )
     logger.info(f"   Val R²: {metrics['val_r2']:.4f} | MAE: {metrics['val_mae']:.2f} min | "
                 f"Time: {metrics['training_time']:.1f}s")
@@ -293,7 +293,7 @@ def evaluate_model(best_result:Dict[str, Any], X_test:pd.DataFrame, y_test:pd.Se
     client = mlflow.MlflowClient()
     trainer = ModelTrainer(config.model, config.mlflow, client)
 
-    test_metrics = trainer.evaluate_on_test(
+    test_metrics = trainer.evaluate_model(
         best_result['model'], X_test, y_test, best_result['run_id']
     )
 
@@ -442,7 +442,7 @@ def log_feature_importance(best_result:Dict[str, Any], feature_names:List[str], 
 #       - experiment_name : override the MLflow experiment name
 
 @flow(name='trip_duration_pipeline',
-      version=1, 
+      version="1", 
       description="Trip duration prediction — Prefect orchestrated"
 )
 def trip_duration_pipeline(

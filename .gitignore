@@ -12,3 +12,5 @@ uv.lock
 
 # Secrets
 .env
+
+images/

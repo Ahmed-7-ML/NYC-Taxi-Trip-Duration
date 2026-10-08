@@ -1,0 +1,35 @@
+artifact_path: file:E:/DataScience Bootcamp/Different Platforms/Flyrank.AI/capstone-lab/pipeline/mlruns/1/models/m-da5a66dcdc5946b18d80a9a9627cdf15/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.skops
+    predict_fn: predict
+    python_version: 3.12.13
+  sklearn:
+    code: null
+    pickled_model: model.skops
+    serialization_format: skops
+    sklearn_version: 1.9.1
+    skops_trusted_types:
+    - sklearn.tree._tree.Tree
+    - sklearn._loss.link.IdentityLink
+    - sklearn._loss.link.Interval
+    - sklearn._loss.loss.HalfSquaredError
+    - xgboost.core.Booster
+    - xgboost.sklearn.XGBRegressor
+is_signature_from_type_hint: false
+mlflow_version: 3.16.1
+model_id: m-da5a66dcdc5946b18d80a9a9627cdf15
+model_size_bytes: 1319672
+model_uuid: m-da5a66dcdc5946b18d80a9a9627cdf15
+prompts: null
+run_id: b8a2e55484d949d29579fc940ce1cb52
+signature:
+  inputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1, 23]}}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float32", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-10-04 15:24:42.572514'

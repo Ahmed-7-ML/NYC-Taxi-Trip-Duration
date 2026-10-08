@@ -4,7 +4,7 @@ class TripRequest(BaseModel):
     tpep_pickup_datetime: str
     PULocationID: int = Field(..., ge=1, le=265)
     DOLocationID: int = Field(..., ge=1, le=265)
-    passenger_count: int = Field(default=1, le=6)
+    passenger_count: int = Field(..., ge=1, le=6)
     VendorID: int = Field(default=1, ge=1, le=2)
     RatecodeID: int = Field(default=1, ge=1, le=6)
     trip_distance: float = Field(..., gt=0)
