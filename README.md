@@ -107,6 +107,18 @@ mlflow.set_tracking_uri("sqlite:///mlflow_trip_duration.db")
 model = mlflow.sklearn.load_model("models:/trip_duration_model@champion")
 ```
 
+### 6.1 Pipeline in action (Prefect UI)
+
+The full flow — acquire → preprocess → split → engineer → train ×6 → select best → evaluate → register — is orchestrated and visualized in the Prefect dashboard:
+
+![Prefect flow DAG](images/1.png)
+
+*Figure 1 — Prefect flow run: the task DAG and the per-task timeline.*
+
+![Prefect task logs](images/2.png)
+
+*Figure 2 — Prefect logs for the run: flow parameters plus each step's completion state.*
+
 ## 7. Inspect results (MLflow UI)
 
 ```powershell
@@ -114,6 +126,14 @@ cd pipeline
 uv run mlflow ui --backend-store-uri sqlite:///mlflow_trip_duration.db --port 5000
 # → http://127.0.0.1:5000, experiment trip_duration_v1, Models → trip_duration_model
 ```
+
+### 7.1 MLflow experiment & model registry
+
+All 6 model runs, their metrics, and the registered model versions are browsable in the MLflow UI:
+
+![MLflow runs and model registry](images/4.png)
+
+*Figure 3 — MLflow experiment `trip_duration_v1`: the runs table with metrics/duration/source, and the `trip_duration_model` versions in the registry.*
 
 ## 8. Serve predictions (FastAPI)
 
@@ -130,6 +150,14 @@ curl -X POST http://127.0.0.1:8000/predict -H "Content-Type: application/json" -
 ```
 
 Request fields (`schemas.py`): `PULocationID/DOLocationID 1-265`, `passenger_count 1-6`, `trip_distance >0`, `VendorID 1-2`, `RatecodeID/payment_type 1-6`, ISO `tpep_pickup_datetime`. Response: `prediction_duration_minutes`, `model_version`, `model_alias`.
+
+### 8.1 Interactive API docs
+
+FastAPI auto-generates an OpenAPI (Swagger) UI exposing the request/response schemas:
+
+![FastAPI Swagger UI](images/3.png)
+
+*Figure 4 — Swagger UI at `/docs`: `GET /health` and `POST /predict`, with the `TripRequest` / `PredictionResponse` schemas.*
 
 ## 9. Docker & Docker Compose (API)
 
