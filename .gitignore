@@ -13,6 +13,4 @@ uv.lock
 # Secrets
 .env
 
-images/
-
 mlruns/
