@@ -42,4 +42,3 @@ CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 #     -e MODEL_NAME=trip_duration_model -e MODEL_ALIAS=champion ^
 #     -v ${PWD}/pipeline/mlflow_trip_duration.db:/app/mlflow_trip_duration.db ^
 #     -v ${PWD}/pipeline/mlruns:/app/mlruns trip-api
-

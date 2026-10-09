@@ -1,0 +1,34 @@
+services:
+  api:
+    image: trip-api
+    build:
+      # Compose file lives in pipeline/src/, but the Dockerfile needs
+      # pipeline/ as context (it COPYs src/... + config/...).
+      # `dockerfile` is resolved relative to `context`.
+      context: ..
+      dockerfile: src/api/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # Must match the Dockerfile's WORKDIR layout (/app):
+      # model_loader defaults to sqlite:////app/mlflow_trip_duration.db
+      # (parents[2] of /app/src/api/model_loader.py == /app).
+      - MLFLOW_TRACKING_URI=sqlite:////app/mlflow_trip_duration.db
+      - MODEL_NAME=trip_duration_model
+      - MODEL_ALIAS=champion
+      # The SQLite DB stores host-absolute artifact paths (e.g. E:/.../pipeline/mlruns/...).
+      # model_loader._remap() strips everything before "/mlruns/" and prepends this root,
+      # so /.../mlruns/xxx -> /app/mlruns/xxx inside the container.
+      - MLFLOW_ARTIFACTS_ROOT=/app
+    volumes:
+      # Relative to this compose file (pipeline/src/): ../ == pipeline/
+      - ../mlflow_trip_duration.db:/app/mlflow_trip_duration.db
+      - ../mlruns:/app/mlruns
+    healthcheck:
+      # python:3.12-slim has no `curl` installed, so probe with stdlib urllib.
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
